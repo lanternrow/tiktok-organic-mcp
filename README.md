@@ -19,6 +19,8 @@ Part of **[The SEO Engine](https://lanternrow.com)** toolkit by [Lantern Row](ht
 
 ### Option 1: npx (no install)
 
+**Single account:**
+
 ```json
 {
   "mcpServers": {
@@ -27,6 +29,22 @@ Part of **[The SEO Engine](https://lanternrow.com)** toolkit by [Lantern Row](ht
       "args": ["-y", "tiktok-organic-mcp"],
       "env": {
         "TIKTOK_ACCESS_TOKEN": "your_access_token"
+      }
+    }
+  }
+}
+```
+
+**Multiple accounts:**
+
+```json
+{
+  "mcpServers": {
+    "tiktok-organic": {
+      "command": "npx",
+      "args": ["-y", "tiktok-organic-mcp"],
+      "env": {
+        "TIKTOK_ACCOUNTS": "[{\"name\":\"mybrand\",\"access_token\":\"act.xxx\",\"client_key\":\"abc123\",\"refresh_token\":\"rft.xxx\"},{\"name\":\"otherbrand\",\"access_token\":\"act.yyy\",\"client_key\":\"def456\",\"refresh_token\":\"rft.yyy\"}]"
       }
     }
   }
@@ -100,7 +118,51 @@ Then add to your Claude Code MCP settings:
 
 > **Tip:** Access tokens expire after 24 hours. Use the `refresh_token` tool or set `TIKTOK_REFRESH_TOKEN` to enable automatic renewal.
 
+## Multi-account support
+
+Monitor multiple TikTok accounts from a single MCP server. Set the `TIKTOK_ACCOUNTS` environment variable as a JSON array:
+
+```json
+[
+  {
+    "name": "mybrand",
+    "access_token": "act.xxx",
+    "client_key": "abc123",
+    "refresh_token": "rft.xxx"
+  },
+  {
+    "name": "otherbrand",
+    "access_token": "act.yyy",
+    "client_key": "def456",
+    "refresh_token": "rft.yyy"
+  }
+]
+```
+
+Each account object requires:
+- `name` — a unique label you pick (used in tool calls)
+- `access_token` — the OAuth access token
+
+Optional:
+- `client_key` — needed for token refresh
+- `refresh_token` — needed for token refresh
+
+**Using accounts in tools:** Every tool accepts an optional `account` parameter. If omitted, the first account in the array is used as default.
+
+```
+get_user_info(account: "mybrand")
+get_videos(account: "otherbrand", max_count: 10)
+```
+
+**Backward compatible:** If you only have one account, the legacy single-env-var format (`TIKTOK_ACCESS_TOKEN`) still works. It creates a default account named "default".
+
 ## Tools
+
+### Account tools
+
+| Tool | Description |
+|------|-------------|
+| `list_accounts` | List all configured TikTok accounts and the default |
 
 ### Read tools
 
@@ -114,13 +176,16 @@ Then add to your Claude Code MCP settings:
 
 | Tool | Description |
 |------|-------------|
-| `refresh_token` | Exchange refresh token for a new access token (requires `TIKTOK_CLIENT_KEY` and `TIKTOK_REFRESH_TOKEN`) |
+| `refresh_token` | Exchange refresh token for a new access token (requires `client_key` and `refresh_token` in account config) |
+
+All read and utility tools accept an optional `account` parameter to target a specific account.
 
 ## Architecture
 
 ```
 src/
   index.ts          # MCP server entry point, tool registration
+  accounts.ts       # Multi-account resolution and configuration
   client.ts         # TikTok API HTTP client (native fetch, no dependencies)
   types.ts          # TypeScript interfaces for API responses
   tools/
@@ -130,11 +195,21 @@ src/
 ```
 
 - **Zero external HTTP dependencies** — uses Node 18+ native `fetch`
+- **Multi-account support** — monitor multiple TikTok accounts from one server
+- **Backward compatible** — single-token env var still works
 - **Cursor-based pagination** — video listing supports pagination via cursor
 - **Zod validation** — all tool inputs validated with descriptive error messages
 - **Batch video queries** — get details for up to 20 videos in one request
 
 ## Environment variables
+
+### Multi-account (recommended)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `TIKTOK_ACCOUNTS` | Yes | JSON array of account objects (see Multi-account support section) |
+
+### Single account (legacy)
 
 | Variable | Required | Description |
 |----------|----------|-------------|

@@ -51,6 +51,7 @@ function formatVideo(v: Video) {
  * Get a paginated list of the user's public videos with engagement metrics.
  */
 export async function getVideos(
+  token: string,
   maxCount: number = 10,
   cursor?: number
 ): Promise<string> {
@@ -64,6 +65,7 @@ export async function getVideos(
 
   const data = await tiktokPost<VideoListResponse>(
     "/v2/video/list/",
+    token,
     body,
     { fields: ALL_VIDEO_FIELDS }
   );
@@ -91,7 +93,10 @@ export async function getVideos(
 /**
  * Get detailed info for specific video IDs (up to 20 at a time).
  */
-export async function getVideoDetails(videoIds: string[]): Promise<string> {
+export async function getVideoDetails(
+  token: string,
+  videoIds: string[]
+): Promise<string> {
   if (videoIds.length === 0) {
     throw new Error("At least one video ID is required.");
   }
@@ -101,6 +106,7 @@ export async function getVideoDetails(videoIds: string[]): Promise<string> {
 
   const data = await tiktokPost<VideoQueryResponse>(
     "/v2/video/query/",
+    token,
     { filters: { video_ids: videoIds } },
     { fields: ALL_VIDEO_FIELDS }
   );

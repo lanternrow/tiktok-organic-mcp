@@ -1,7 +1,7 @@
 {
   "name": "tiktok-organic-mcp",
   "mcpName": "io.github.lanternrow/tiktok-organic-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for TikTok organic analytics — video performance, engagement metrics, and profile insights. Built for Claude Code and other MCP-compatible AI tools.",
   "type": "module",
   "main": "dist/index.js",

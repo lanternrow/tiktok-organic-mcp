@@ -5,29 +5,20 @@
  *
  * All endpoints require an OAuth 2.0 bearer token obtained through
  * TikTok's Login Kit authorization flow.
+ *
+ * Token is passed explicitly to support multi-account usage.
  */
 
 const BASE_URL = "https://open.tiktokapis.com";
-
-function getAccessToken(): string {
-  const token = process.env.TIKTOK_ACCESS_TOKEN;
-  if (!token) {
-    throw new Error(
-      "TIKTOK_ACCESS_TOKEN environment variable is not set. " +
-        "Generate one via TikTok's OAuth flow: https://developers.tiktok.com/doc/login-kit-web"
-    );
-  }
-  return token;
-}
 
 /**
  * Make a GET request to the TikTok API.
  */
 export async function tiktokGet<T>(
   path: string,
+  token: string,
   params?: Record<string, string>
 ): Promise<T> {
-  const token = getAccessToken();
   const url = new URL(path, BASE_URL);
 
   if (params) {
@@ -56,10 +47,10 @@ export async function tiktokGet<T>(
  */
 export async function tiktokPost<T>(
   path: string,
+  token: string,
   body: Record<string, unknown>,
   params?: Record<string, string>
 ): Promise<T> {
-  const token = getAccessToken();
   const url = new URL(path, BASE_URL);
 
   if (params) {

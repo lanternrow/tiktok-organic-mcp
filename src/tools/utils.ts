@@ -5,40 +5,39 @@
  */
 
 import { refreshAccessToken } from "../client.js";
+import type { AccountConfig } from "../accounts.js";
 
 /**
- * Refresh the TikTok access token using the stored refresh token.
- * Returns the new token details (the user should update their env).
+ * Refresh the TikTok access token for a specific account.
+ * Returns the new token details (the user should update their config).
  */
-export async function refreshToken(): Promise<string> {
-  const clientKey = process.env.TIKTOK_CLIENT_KEY;
-  const refreshTokenValue = process.env.TIKTOK_REFRESH_TOKEN;
-
-  if (!clientKey) {
+export async function refreshToken(account: AccountConfig): Promise<string> {
+  if (!account.client_key) {
     throw new Error(
-      "TIKTOK_CLIENT_KEY environment variable is not set. " +
-        "This is your app's Client Key from the TikTok Developer Portal."
+      `Account "${account.name}" does not have a client_key configured. ` +
+        "This is required for token refresh."
     );
   }
 
-  if (!refreshTokenValue) {
+  if (!account.refresh_token) {
     throw new Error(
-      "TIKTOK_REFRESH_TOKEN environment variable is not set. " +
+      `Account "${account.name}" does not have a refresh_token configured. ` +
         "This is obtained during the OAuth authorization flow."
     );
   }
 
-  const data = await refreshAccessToken(clientKey, refreshTokenValue);
+  const data = await refreshAccessToken(account.client_key, account.refresh_token);
 
   return JSON.stringify(
     {
+      account: account.name,
       access_token: data.access_token,
       expires_in: data.expires_in,
       refresh_token: data.refresh_token,
       refresh_expires_in: data.refresh_expires_in,
       scope: data.scope,
       token_type: data.token_type,
-      note: "Update your TIKTOK_ACCESS_TOKEN and TIKTOK_REFRESH_TOKEN environment variables with these new values.",
+      note: "Update your TIKTOK_ACCOUNTS config (or env vars) with these new token values.",
     },
     null,
     2

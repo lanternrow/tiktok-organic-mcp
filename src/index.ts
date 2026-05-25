@@ -8,6 +8,7 @@
  *   - Video listing with engagement metrics
  *   - Per-video performance details
  *   - Token refresh utility
+ *   - Multi-account support
  *
  * Part of The SEO Engine toolkit by Lantern Row.
  * https://lanternrow.com
@@ -17,44 +18,83 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
+import { resolveAccount, listAccountNames } from "./accounts.js";
 import { getUserInfo } from "./tools/user.js";
 import { getVideos, getVideoDetails } from "./tools/videos.js";
 import { refreshToken } from "./tools/utils.js";
 
 const server = new McpServer({
   name: "tiktok-organic-mcp",
-  version: "1.0.0",
+  version: "1.1.0",
 });
 
 // ─── Helper ───────────────────────────────────────────────────────
 
-function wrapHandler(fn: () => Promise<string>) {
-  return async () => {
-    try {
-      const text = await fn();
-      return { content: [{ type: "text" as const, text }] };
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { content: [{ type: "text" as const, text: `Error: ${message}` }] };
-    }
-  };
+function errorResponse(err: unknown) {
+  const message = err instanceof Error ? err.message : String(err);
+  return { content: [{ type: "text" as const, text: `Error: ${message}` }] };
 }
 
 // ─── Tools ────────────────────────────────────────────────────────
 
-// 1. get_user_info
+// 1. list_accounts
 server.tool(
-  "get_user_info",
-  "Get the authenticated TikTok user's profile info: username, bio, follower/following counts, total likes, video count, and verification status.",
+  "list_accounts",
+  "List all configured TikTok accounts available for querying.",
   {},
-  wrapHandler(() => getUserInfo())
+  async () => {
+    try {
+      const names = listAccountNames();
+      const text = JSON.stringify(
+        {
+          accounts: names,
+          default: names[0],
+          count: names.length,
+        },
+        null,
+        2
+      );
+      return { content: [{ type: "text" as const, text }] };
+    } catch (err: unknown) {
+      return errorResponse(err);
+    }
+  }
 );
 
-// 2. get_videos
+// 2. get_user_info
+server.tool(
+  "get_user_info",
+  "Get a TikTok user's profile info: username, bio, follower/following counts, total likes, video count, and verification status.",
+  {
+    account: z
+      .string()
+      .optional()
+      .describe(
+        "Account name to query. Use list_accounts to see available options. Defaults to the first configured account."
+      ),
+  },
+  async (args) => {
+    try {
+      const acct = resolveAccount(args.account);
+      const text = await getUserInfo(acct.access_token);
+      return { content: [{ type: "text" as const, text }] };
+    } catch (err: unknown) {
+      return errorResponse(err);
+    }
+  }
+);
+
+// 3. get_videos
 server.tool(
   "get_videos",
   "Get a paginated list of the user's public TikTok videos with engagement metrics (views, likes, comments, shares). Returns up to 20 videos per page.",
   {
+    account: z
+      .string()
+      .optional()
+      .describe(
+        "Account name to query. Use list_accounts to see available options. Defaults to the first configured account."
+      ),
     max_count: z
       .number()
       .min(1)
@@ -70,20 +110,26 @@ server.tool(
   },
   async (args) => {
     try {
-      const text = await getVideos(args.max_count, args.cursor);
+      const acct = resolveAccount(args.account);
+      const text = await getVideos(acct.access_token, args.max_count, args.cursor);
       return { content: [{ type: "text" as const, text }] };
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { content: [{ type: "text" as const, text: `Error: ${message}` }] };
+      return errorResponse(err);
     }
   }
 );
 
-// 3. get_video_details
+// 4. get_video_details
 server.tool(
   "get_video_details",
   "Get detailed performance metrics for specific TikTok videos by ID. Returns views, likes, comments, shares, duration, and more. Max 20 video IDs per request.",
   {
+    account: z
+      .string()
+      .optional()
+      .describe(
+        "Account name to query. Use list_accounts to see available options. Defaults to the first configured account."
+      ),
     video_ids: z
       .array(z.string())
       .min(1)
@@ -92,21 +138,36 @@ server.tool(
   },
   async (args) => {
     try {
-      const text = await getVideoDetails(args.video_ids);
+      const acct = resolveAccount(args.account);
+      const text = await getVideoDetails(acct.access_token, args.video_ids);
       return { content: [{ type: "text" as const, text }] };
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { content: [{ type: "text" as const, text: `Error: ${message}` }] };
+      return errorResponse(err);
     }
   }
 );
 
-// 4. refresh_token
+// 5. refresh_token
 server.tool(
   "refresh_token",
-  "Refresh the TikTok access token using the stored refresh token. Returns new access and refresh tokens. Requires TIKTOK_CLIENT_KEY and TIKTOK_REFRESH_TOKEN env vars.",
-  {},
-  wrapHandler(() => refreshToken())
+  "Refresh the TikTok access token for an account using its stored refresh token. Returns new access and refresh tokens. Requires client_key and refresh_token in the account config.",
+  {
+    account: z
+      .string()
+      .optional()
+      .describe(
+        "Account name to refresh. Use list_accounts to see available options. Defaults to the first configured account."
+      ),
+  },
+  async (args) => {
+    try {
+      const acct = resolveAccount(args.account);
+      const text = await refreshToken(acct);
+      return { content: [{ type: "text" as const, text }] };
+    } catch (err: unknown) {
+      return errorResponse(err);
+    }
+  }
 );
 
 // ─── Start ────────────────────────────────────────────────────────

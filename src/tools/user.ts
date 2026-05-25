@@ -31,8 +31,8 @@ const ALL_USER_FIELDS = [
 /**
  * Get the authenticated user's profile info and stats.
  */
-export async function getUserInfo(): Promise<string> {
-  const data = await tiktokGet<UserInfoResponse>("/v2/user/info/", {
+export async function getUserInfo(token: string): Promise<string> {
+  const data = await tiktokGet<UserInfoResponse>("/v2/user/info/", token, {
     fields: ALL_USER_FIELDS,
   });
 
