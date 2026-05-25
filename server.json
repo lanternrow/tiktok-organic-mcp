@@ -1,0 +1,43 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.lanternrow/tiktok-organic-mcp",
+  "description": "TikTok organic analytics — video performance, engagement metrics, and profile insights.",
+  "repository": {
+    "url": "https://github.com/lanternrow/tiktok-organic-mcp",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "tiktok-organic-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "TikTok OAuth Access Token from Login Kit flow",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true,
+          "name": "TIKTOK_ACCESS_TOKEN"
+        },
+        {
+          "description": "TikTok App Client Key (for token refresh)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true,
+          "name": "TIKTOK_CLIENT_KEY"
+        },
+        {
+          "description": "TikTok Refresh Token (for token renewal)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true,
+          "name": "TIKTOK_REFRESH_TOKEN"
+        }
+      ]
+    }
+  ]
+}
